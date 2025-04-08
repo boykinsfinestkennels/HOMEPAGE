@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2025 Editable Calendar (Larger Landscape with Three Photos)</title>
+    <title>2025 Editable Calendar (Larger Landscape with Fixed File Upload)</title>
     <style>
         /* Reset default margins and padding */
         * {
@@ -502,21 +502,49 @@
         // Function to load a photo in the hero section
         function loadPhoto(event, photoNumber) {
             const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.getElementById(`hero-image-${photoNumber}`);
-                    img.src = e.target.result;
-                    // Save the image to localStorage
-                    localStorage.setItem(`heroImage${photoNumber}`, e.target.result);
-                };
-                reader.onerror = function() {
-                    alert('Error loading the image. Please try again.');
-                };
-                reader.readAsDataURL(file);
-            } else {
+            if (!file) {
                 alert('No file selected. Please choose an image.');
+                return;
             }
+
+            // Check if the file is an image
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file (e.g., JPG, PNG).');
+                return;
+            }
+
+            // Check file size (limit to 1MB to avoid localStorage issues)
+            const maxSizeInBytes = 1 * 1024 * 1024; // 1MB
+            if (file.size > maxSizeInBytes) {
+                alert('File is too large. Please select an image smaller than 1MB.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const img = document.getElementById(`hero-image-${photoNumber}`);
+                    const dataUrl = e.target.result;
+
+                    // Check if localStorage has enough space
+                    const testKey = `heroImage${photoNumber}`;
+                    try {
+                        localStorage.setItem(testKey, dataUrl);
+                    } catch (error) {
+                        alert('Not enough space in localStorage to store the image. Please use a smaller image or clear your browser data.');
+                        return;
+                    }
+
+                    img.src = dataUrl;
+                    alert(`Photo ${photoNumber} uploaded successfully! Note: This image is stored in your browser and will only be visible on this device.`);
+                } catch (error) {
+                    alert('Error displaying the image. Please try a different file.');
+                }
+            };
+            reader.onerror = function() {
+                alert('Error loading the image. Please try a different file.');
+            };
+            reader.readAsDataURL(file);
         }
 
         // Function to adjust transparency
@@ -533,7 +561,11 @@
             for (let i = 1; i <= 3; i++) {
                 const savedImage = localStorage.getItem(`heroImage${i}`);
                 if (savedImage) {
-                    document.getElementById(`hero-image-${i}`).src = savedImage;
+                    try {
+                        document.getElementById(`hero-image-${i}`).src = savedImage;
+                    } catch (error) {
+                        console.error(`Error loading saved image ${i}:`, error);
+                    }
                 }
             }
             // Load saved transparency
